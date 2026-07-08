@@ -40,6 +40,12 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(
+  FILES
+    lib/libCameraSDK.so
+  DESTINATION lib
+)
+
 add_executable(${PROJECT_NAME} src/main.cpp)
 ament_target_dependencies(${PROJECT_NAME}
   rclcpp
