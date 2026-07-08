@@ -1,0 +1,115 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-e9feb15e0e0bf8cecb4d.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "insta360_ros_driver",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ament_cmake_python_build_insta360_ros_driver_egg::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ament_cmake_python_build_insta360_ros_driver_egg-Debug-591b6bd84d4b5e3f53d6.json",
+					"name" : "ament_cmake_python_build_insta360_ros_driver_egg",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ament_cmake_python_copy_insta360_ros_driver::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ament_cmake_python_copy_insta360_ros_driver-Debug-957d45c9d096bd4d9c36.json",
+					"name" : "ament_cmake_python_copy_insta360_ros_driver",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "decoder::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-decoder-Debug-62e9f1c5cf85f63ee3ee.json",
+					"name" : "decoder",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "equirectangular_cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-equirectangular_cpp-Debug-8483ee4f15d674d63160.json",
+					"name" : "equirectangular_cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "insta360_ros_driver::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-insta360_ros_driver-Debug-ce844a64e0ff7702ca1b.json",
+					"name" : "insta360_ros_driver",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "insta360_ros_driver_uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-insta360_ros_driver_uninstall-Debug-202abec540bb556a40c9.json",
+					"name" : "insta360_ros_driver_uninstall",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-uninstall-Debug-be141b7a41ef2c9f7e6a.json",
+					"name" : "uninstall",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/river/ibex_ws/src/insta360_ros_driver/build",
+		"source" : "/home/river/ibex_ws/src/insta360_ros_driver"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

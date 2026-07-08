@@ -276,8 +276,8 @@ void EquirectangularNode::imageCallback(const sensor_msgs::msg::Image::SharedPtr
         cv::Mat front_img_full = dual_fisheye_img(cv::Rect(midpoint, 0, midpoint, img_height));
         cv::Mat back_img_full = dual_fisheye_img(cv::Rect(0, 0, midpoint, img_height));
         
-        cv::rotate(front_img_full, front_img_full, cv::ROTATE_90_COUNTERCLOCKWISE);
-        cv::rotate(back_img_full, back_img_full, cv::ROTATE_90_CLOCKWISE);
+        // cv::rotate(front_img_full, front_img_full, cv::ROTATE_90_COUNTERCLOCKWISE);
+        // cv::rotate(back_img_full, back_img_full, cv::ROTATE_90_CLOCKWISE);
         
         
         // Crop images based on crop_size parameter
