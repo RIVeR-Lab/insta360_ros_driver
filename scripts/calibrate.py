@@ -79,10 +79,11 @@ class CalibrationNode(Node):
             reliability=rclpy.qos.ReliabilityPolicy.RELIABLE
         )
         
+        # Topics must match the namespace in config/namespace.yaml
         self.dual_fisheye_sub = self.create_subscription(
-            Image, '/dual_fisheye/image', self.image_callback, qos)
+            Image, '/insta360/dual_fisheye/image', self.image_callback, qos)
         self.equirect_pub = self.create_publisher(
-            Image, '/equirectangular/image', qos)
+            Image, '/insta360/equirectangular/image', qos)
         
         self.get_logger().info("Calibration mode enabled")
         self.setup_calibration_ui()

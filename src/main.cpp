@@ -23,7 +23,7 @@ public:
     TestStreamDelegate(const std::shared_ptr<rclcpp::Node>& node) : node_(node) {
         // Publisher for the compressed H.264 video stream
         compressed_pub_ = node_->create_publisher<sensor_msgs::msg::CompressedImage>(
-            "/dual_fisheye/image/compressed", 
+            "dual_fisheye/image/compressed",
             rclcpp::QoS(10)
         );
 
@@ -60,7 +60,7 @@ public:
         for (const auto& gyro : data) {
             auto msg = std::make_unique<sensor_msgs::msg::Imu>();
             msg->header.stamp = node_->get_clock()->now();
-            msg->header.frame_id = "imu_frame";
+            msg->header.frame_id = "insta_imu";
             msg->angular_velocity.x = gyro.gx;
             msg->angular_velocity.y = gyro.gy;
             msg->angular_velocity.z = gyro.gz;

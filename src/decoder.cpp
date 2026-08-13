@@ -311,8 +311,8 @@ private:
 
 public:
     H264DecoderNode() : Node("h264_decoder_node") {
-        this->declare_parameter("compressed_topic", "/dual_fisheye/image/compressed");
-        this->declare_parameter("uncompressed_topic", "/dual_fisheye/image");
+        this->declare_parameter("compressed_topic", "dual_fisheye/image/compressed");
+        this->declare_parameter("uncompressed_topic", "dual_fisheye/image");
         this->declare_parameter("skip_frame", 0);
         this->declare_parameter("i_frame_only", false);
 

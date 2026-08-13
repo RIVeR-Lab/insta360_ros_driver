@@ -39,11 +39,11 @@ EquirectangularNode::EquirectangularNode()
     
     // Create publishers and subscribers
     dual_fisheye_sub_ = create_subscription<sensor_msgs::msg::Image>(
-        "/dual_fisheye/image", qos,
+        "dual_fisheye/image", qos,
         std::bind(&EquirectangularNode::imageCallback, this, std::placeholders::_1));
-    
+
     equirect_pub_ = create_publisher<sensor_msgs::msg::Image>(
-        "/equirectangular/image", qos);
+        "equirectangular/image", qos);
 }
 
 EquirectangularNode::~EquirectangularNode()

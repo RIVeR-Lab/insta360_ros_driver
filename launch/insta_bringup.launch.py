@@ -1,10 +1,14 @@
 # Launch file for Insta360 ROS driver
+import os
+import yaml
+
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
@@ -42,6 +46,12 @@ def generate_launch_description():
         )
     )
 
+    namespace_config_path = os.path.join(
+        get_package_share_directory("insta360_ros_driver"), "config", "namespace.yaml"
+    )
+    with open(namespace_config_path, "r") as f:
+        insta_namespace = yaml.safe_load(f)["namespace"]
+
 
 
     #=============== Nodes ===============#
@@ -50,6 +60,7 @@ def generate_launch_description():
         package="insta360_ros_driver",
         executable="insta360_ros_driver",
         name="insta360_ros_driver",
+        namespace=insta_namespace,
         output="log",
     )
     ld.add_action(driver_node)
@@ -58,10 +69,11 @@ def generate_launch_description():
         package="insta360_ros_driver",
         executable="decoder",
         name="image_decoder",
+        namespace=insta_namespace,
         parameters=[
             {
-                "compressed_topic": "/dual_fisheye/image/compressed",
-                "uncompressed_topic": "/dual_fisheye/image",
+                "compressed_topic": "dual_fisheye/image/compressed",
+                "uncompressed_topic": "dual_fisheye/image",
                 "skip_frame": 0,
                 "i_frame_only": False,
             }
@@ -74,6 +86,7 @@ def generate_launch_description():
         package="insta360_ros_driver",
         executable="equirectangular_cpp",
         name="equirectangular_node",
+        namespace=insta_namespace,
         parameters=[equirectangular_config],
         condition=IfCondition(equirectangular),
         output="screen",
@@ -84,6 +97,7 @@ def generate_launch_description():
         package="imu_filter_madgwick",
         executable="imu_filter_madgwick_node",
         name="imu_filter",
+        namespace=insta_namespace,
         parameters=[imu_config],
         condition=IfCondition(imu_filter),
         output="log",
