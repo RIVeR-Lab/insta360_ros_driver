@@ -8,3 +8,4 @@ equirectangular_node:
     gpu: true
     out_width: 1920
     out_height: 960
+    frame_id: insta_sensor

@@ -41,6 +41,7 @@ private:
     bool gpu_enabled_;
     int out_width_;
     int out_height_;
+    std::string frame_id_;
     
     // Camera parameters
     double cx_, cy_;

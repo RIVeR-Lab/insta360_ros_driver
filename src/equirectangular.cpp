@@ -20,6 +20,9 @@ EquirectangularNode::EquirectangularNode()
     declare_parameter("gpu", true);
     declare_parameter("out_width", 1920);
     declare_parameter("out_height", 960);
+    // TF frame stamped on the published equirectangular image. Defaults to the
+    // Insta360 optical frame published by the bringup static transforms.
+    declare_parameter("frame_id", "insta_sensor");
     
     // Load parameters
     loadParameters();
@@ -59,6 +62,7 @@ void EquirectangularNode::loadParameters()
         out_width_ = get_parameter("out_width").as_int();
         out_height_ = get_parameter("out_height").as_int();
         gpu_enabled_ = get_parameter("gpu").as_bool();
+        frame_id_ = get_parameter("frame_id").as_string();
         
         auto translation = get_parameter("translation").as_double_array();
         tx_ = translation[0];
@@ -78,6 +82,7 @@ void EquirectangularNode::loadParameters()
                     rotation_deg[0], rotation_deg[1], rotation_deg[2]);
         RCLCPP_INFO(get_logger(), "  Output size: %dx%d", out_width_, out_height_);
         RCLCPP_INFO(get_logger(), "  GPU enabled: %s", gpu_enabled_ ? "true" : "false");
+        RCLCPP_INFO(get_logger(), "  Frame ID: %s", frame_id_.c_str());
     } catch (const std::exception& e) {
         RCLCPP_ERROR(get_logger(), "Error loading parameters: %s", e.what());
         gpu_enabled_ = true;
@@ -317,7 +322,10 @@ void EquirectangularNode::imageCallback(const sensor_msgs::msg::Image::SharedPtr
         
         // Publish result
         cv_bridge::CvImage out_msg;
-        out_msg.header = dual_fisheye_msg->header;
+        // Keep the input stamp so the output lines up in time with the
+        // dual-fisheye frame it came from; set the frame explicitly.
+        out_msg.header.stamp = dual_fisheye_msg->header.stamp;
+        out_msg.header.frame_id = frame_id_;
         out_msg.encoding = "rgb8";
         out_msg.image = equirect_img;
         equirect_pub_->publish(*out_msg.toImageMsg());

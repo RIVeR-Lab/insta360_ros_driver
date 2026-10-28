@@ -78,7 +78,7 @@ def generate_launch_description():
                 "i_frame_only": False,
             }
         ],
-        output="log",
+        output="screen",
     )
     ld.add_action(decoder_node)
 

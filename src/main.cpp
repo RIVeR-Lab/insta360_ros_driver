@@ -18,9 +18,16 @@ private:
     std::shared_ptr<rclcpp::Node> node_;
     rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr compressed_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
+    std::string frame_id_;
+    std::string imu_frame_id_;
 
 public:
     TestStreamDelegate(const std::shared_ptr<rclcpp::Node>& node) : node_(node) {
+        // TF frames stamped on outgoing messages. Defaults match the frames
+        // published by the bringup static transforms.
+        frame_id_ = node_->declare_parameter<std::string>("frame_id", "insta_sensor");
+        imu_frame_id_ = node_->declare_parameter<std::string>("imu_frame_id", "insta_imu");
+
         // Publisher for the compressed H.264 video stream
         compressed_pub_ = node_->create_publisher<sensor_msgs::msg::CompressedImage>(
             "dual_fisheye/image/compressed",
@@ -30,6 +37,8 @@ public:
         // Publisher for IMU data (remains the same)
         imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>("imu/data_raw", rclcpp::SensorDataQoS());
         RCLCPP_INFO(node_->get_logger(), "Publisher for compressed images and IMU created.");
+        RCLCPP_INFO(node_->get_logger(), "Frame ID: %s | IMU frame ID: %s",
+                    frame_id_.c_str(), imu_frame_id_.c_str());
     }
 
     virtual ~TestStreamDelegate() {}
@@ -43,7 +52,7 @@ public:
 
             // Set the header
             msg->header.stamp = node_->get_clock()->now();
-            msg->header.frame_id = "camera_frame";
+            msg->header.frame_id = frame_id_;
 
             // Set the format to H.264
             // The subscriber will need to know this to select the correct decoder.
@@ -60,7 +69,7 @@ public:
         for (const auto& gyro : data) {
             auto msg = std::make_unique<sensor_msgs::msg::Imu>();
             msg->header.stamp = node_->get_clock()->now();
-            msg->header.frame_id = "insta_imu";
+            msg->header.frame_id = imu_frame_id_;
             msg->angular_velocity.x = gyro.gx;
             msg->angular_velocity.y = gyro.gy;
             msg->angular_velocity.z = gyro.gz;
