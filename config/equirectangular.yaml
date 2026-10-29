@@ -1,11 +1,14 @@
-equirectangular_node:
+# Key uses a wildcard so it matches the node in any namespace
+# (the launch file puts it under /insta360).
+/**/equirectangular_node:
   ros__parameters:
     cx_offset: 0.0
     cy_offset: 0.0
-    crop_size: 1380
+    # Stream is 2880x1440 (1440x1440 per lens); tuned visually.
+    crop_size: 1395
     translation: [0.0, 0.0, -0.105]
     rotation_deg: [-0.5, 0.0, 1.1]
     gpu: true
     out_width: 1920
     out_height: 960
-    frame_id: insta_sensor
+    frame_id: "insta_sensor"

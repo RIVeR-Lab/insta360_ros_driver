@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fast DDS profile for large same-host messages (raw camera images, point clouds).
+
+  The default shared-memory segment is 512 KB, so a 5.5 MB raw image falls back
+  to UDP loopback and is fragmented (~85 datagrams per subscriber per frame).
+  This profile enlarges the SHM segment so those messages go through shared
+  memory, and keeps UDP for traffic to other machines.
+
+  Usage (every ROS 2 process, including RViz, must see this variable):
+    export FASTRTPS_DEFAULT_PROFILES_FILE=$HOME/ibex_ws/config/fastdds_large_msgs.xml
+-->
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+    <transport_descriptors>
+        <transport_descriptor>
+            <transport_id>shm_large</transport_id>
+            <type>SHM</type>
+            <!-- 64 MB: room for several 5.5 MB images in flight -->
+            <segment_size>67108864</segment_size>
+        </transport_descriptor>
+        <transport_descriptor>
+            <transport_id>udp_transport</transport_id>
+            <type>UDPv4</type>
+        </transport_descriptor>
+    </transport_descriptors>
+
+    <participant profile_name="large_msgs_participant" is_default_profile="true">
+        <rtps>
+            <userTransports>
+                <transport_id>shm_large</transport_id>
+                <transport_id>udp_transport</transport_id>
+            </userTransports>
+            <useBuiltinTransports>false</useBuiltinTransports>
+        </rtps>
+    </participant>
+</profiles>

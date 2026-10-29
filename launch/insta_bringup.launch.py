@@ -3,7 +3,7 @@ import os
 import yaml
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -13,6 +13,20 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     ld = LaunchDescription()
+
+    #=============== Environment ===============#
+    # Must come before any node: it only applies to processes started after it.
+    # Enlarges Fast DDS shared memory so 5.5 MB raw images avoid UDP fragmentation.
+    # RViz and CLI tools started from other terminals still need the same
+    # variable (e.g. in ~/.bashrc).
+    ld.add_action(
+        SetEnvironmentVariable(
+            "FASTRTPS_DEFAULT_PROFILES_FILE",
+            PathJoinSubstitution(
+                [FindPackageShare("insta360_ros_driver"), "config", "fastdds_large_msgs.xml"]
+            ),
+        )
+    )
 
     #=============== Launch Arguments ===============#
 

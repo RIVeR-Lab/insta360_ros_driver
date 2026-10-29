@@ -1,8 +1,12 @@
-imu_filter:
+# Key uses a wildcard so it matches the node in any namespace
+# (the launch file puts it under /insta360).
+/**/imu_filter:
   ros__parameters:
     stateless: false
     use_mag: false
-    publish_tf: true
+    # false: insta_imu already has a parent (insta_sensor) in the static TF
+    # tree, and a frame can only have one parent.
+    publish_tf: false
     reverse_tf: false
     fixed_frame: "imu_stabilized"
     constant_dt: 0.0

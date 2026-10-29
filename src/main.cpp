@@ -3,6 +3,10 @@
 #include <string>
 #include <vector>
 #include <atomic>
+#include <cmath>
+#include <cstdint>
+#include <limits>
+#include <mutex>
 
 #include <camera/camera.h>
 #include <camera/photography_settings.h>
@@ -21,6 +25,90 @@ private:
     std::string frame_id_;
     std::string imu_frame_id_;
 
+    // ---------------- IMU clock mapping ----------------
+    // The SDK delivers gyro/accel samples in batches. Stamping each sample with
+    // now() gives a whole batch the same stamp (dt = 0 for the filter, then one
+    // large jump). Instead, each sample is stamped with its own camera
+    // timestamp mapped into ROS time:
+    //     ros_ns = camera_ts * ns_per_tick_ + offset_ns_
+    // The timestamp unit is not documented, so it is measured over the first
+    // second by comparing camera-clock elapsed time against ROS-clock elapsed
+    // time and rounding to the nearest of s / ms / us / ns.
+    static constexpr double kCalibrationSeconds = 1.0;
+    static constexpr double kDriftGain = 1e-4;  // slow tracking of clock drift
+    std::mutex imu_mutex_;
+    bool imu_clock_ready_ = false;
+    bool imu_calibrating_ = false;
+    int64_t calib_cam0_ = 0;
+    int64_t calib_wall0_ns_ = 0;
+    double ns_per_tick_ = 0.0;
+    double offset_ns_ = 0.0;
+    int64_t last_cam_ts_ = std::numeric_limits<int64_t>::min();
+    uint64_t skipped_samples_ = 0;
+
+    void ResetImuClock() {
+        imu_clock_ready_ = false;
+        imu_calibrating_ = false;
+        last_cam_ts_ = std::numeric_limits<int64_t>::min();
+    }
+
+    // Returns false while the clock mapping is still being measured.
+    bool UpdateImuClock(const std::vector<ins_camera::GyroData>& data, int64_t now_ns) {
+        if (!imu_clock_ready_) {
+            if (!imu_calibrating_) {
+                calib_cam0_ = data.back().timestamp;
+                calib_wall0_ns_ = now_ns;
+                imu_calibrating_ = true;
+                RCLCPP_INFO(node_->get_logger(), "Measuring IMU timestamp clock (%.0f s)...",
+                            kCalibrationSeconds);
+                return false;
+            }
+            const double wall_dt_s = (now_ns - calib_wall0_ns_) * 1e-9;
+            if (wall_dt_s < kCalibrationSeconds) {
+                return false;
+            }
+            const double cam_dt = static_cast<double>(data.back().timestamp - calib_cam0_);
+            if (cam_dt <= 0.0) {
+                RCLCPP_WARN(node_->get_logger(),
+                            "IMU timestamps did not advance during calibration; retrying");
+                imu_calibrating_ = false;
+                return false;
+            }
+
+            const double ticks_per_s = cam_dt / wall_dt_s;
+            double exponent = std::round(std::log10(ticks_per_s) / 3.0) * 3.0;
+            exponent = std::min(9.0, std::max(0.0, exponent));
+            const double nominal = std::pow(10.0, exponent);
+            ns_per_tick_ = 1e9 / nominal;
+            offset_ns_ = static_cast<double>(now_ns) - data.back().timestamp * ns_per_tick_;
+            imu_clock_ready_ = true;
+
+            const char* unit = exponent == 0.0 ? "seconds" : exponent == 3.0 ? "milliseconds"
+                             : exponent == 6.0 ? "microseconds" : "nanoseconds";
+            RCLCPP_INFO(node_->get_logger(),
+                        "IMU clock synced: camera timestamps are in %s (measured %.1f ticks/s)",
+                        unit, ticks_per_s);
+            if (std::fabs(ticks_per_s / nominal - 1.0) > 0.05) {
+                RCLCPP_WARN(node_->get_logger(),
+                            "Measured IMU clock rate is more than 5%% off the nearest unit; "
+                            "check the timestamps");
+            }
+            return true;
+        }
+
+        // candidate = true offset + transport latency (latency >= 0). The
+        // smallest candidate is the best estimate, so adopt lower values at
+        // once and follow higher ones only slowly (camera/host clock drift).
+        // This also guarantees stamps never lie in the future.
+        const double candidate = static_cast<double>(now_ns) - data.back().timestamp * ns_per_tick_;
+        if (candidate < offset_ns_) {
+            offset_ns_ = candidate;
+        } else {
+            offset_ns_ += kDriftGain * (candidate - offset_ns_);
+        }
+        return true;
+    }
+
 public:
     TestStreamDelegate(const std::shared_ptr<rclcpp::Node>& node) : node_(node) {
         // TF frames stamped on outgoing messages. Defaults match the frames
@@ -34,8 +122,9 @@ public:
             rclcpp::QoS(10)
         );
 
-        // Publisher for IMU data (remains the same)
-        imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>("imu/data_raw", rclcpp::SensorDataQoS());
+        // Publisher for IMU data. RELIABLE is compatible with both reliable and
+        // best-effort subscribers; depth covers a few batches of samples.
+        imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>("imu/data_raw", rclcpp::QoS(200).reliable());
         RCLCPP_INFO(node_->get_logger(), "Publisher for compressed images and IMU created.");
         RCLCPP_INFO(node_->get_logger(), "Frame ID: %s | IMU frame ID: %s",
                     frame_id_.c_str(), imu_frame_id_.c_str());
@@ -66,9 +155,40 @@ public:
     }
 
     void OnGyroData(const std::vector<ins_camera::GyroData>& data) override {
+        if (data.empty() || !imu_pub_) {
+            return;
+        }
+        std::lock_guard<std::mutex> lock(imu_mutex_);
+
+        const auto clock_type = node_->get_clock()->get_clock_type();
+        const int64_t now_ns = node_->get_clock()->now().nanoseconds();
+
+        // Camera clock jumped backwards (e.g. camera reset): re-measure.
+        if (imu_clock_ready_ && last_cam_ts_ != std::numeric_limits<int64_t>::min() &&
+            (last_cam_ts_ - data.front().timestamp) * ns_per_tick_ > 1e9) {
+            RCLCPP_WARN(node_->get_logger(), "IMU timestamps jumped backwards; re-syncing clock");
+            ResetImuClock();
+        }
+
+        if (!UpdateImuClock(data, now_ns)) {
+            return;  // still measuring; drop these samples
+        }
+
         for (const auto& gyro : data) {
+            // Samples must be strictly increasing for the filter's dt.
+            if (gyro.timestamp <= last_cam_ts_) {
+                ++skipped_samples_;
+                RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000,
+                                     "Skipped %lu IMU samples with non-increasing timestamps",
+                                     static_cast<unsigned long>(skipped_samples_));
+                continue;
+            }
+            last_cam_ts_ = gyro.timestamp;
+
+            const auto stamp_ns = static_cast<int64_t>(gyro.timestamp * ns_per_tick_ + offset_ns_);
+
             auto msg = std::make_unique<sensor_msgs::msg::Imu>();
-            msg->header.stamp = node_->get_clock()->now();
+            msg->header.stamp = rclcpp::Time(stamp_ns, clock_type);
             msg->header.frame_id = imu_frame_id_;
             msg->angular_velocity.x = gyro.gx;
             msg->angular_velocity.y = gyro.gy;
@@ -142,6 +262,7 @@ public:
         //RES_2560_1280P30
         //RES_1152_1152P30 (this will give 2304 x 1152 at 30 FPS)
         //RES_1920_960P30  
+        //RES_2880_1440
         param.lrv_video_resulution = ins_camera::VideoResolution::RES_1440_720P30;
         param.video_bitrate = 1024 * 1024 / 2;
         param.enable_audio = false;
